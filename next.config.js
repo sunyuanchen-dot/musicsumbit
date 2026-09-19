@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
+  basePath: '/musicsumbit',
+  assetPrefix: '/musicsumbit',
   images: {
     unoptimized: true,
   },
