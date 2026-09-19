@@ -24,7 +24,7 @@ export default function Home() {
 
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
-  const [imageName, setImageName] = useState<string>('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploaded, setUploaded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -44,15 +44,30 @@ export default function Home() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    
+
+    let imageUrl: string | null = null
+
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop()
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('covers')
+        .upload(filename, imageFile)
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from('covers').getPublicUrl(filename)
+        imageUrl = data.publicUrl
+      }
+    }
+
     const { error } = await supabase
       .from('music')
-      .insert({ title, artist })
-    
+      .insert({ title, artist, image: imageUrl })
+
     setSubmitting(false)
     if (!error) {
       setUploaded(true)
-      setTimeout(() => { setTitle(''); setArtist(''); setImageName('') }, 2000)
+      setTimeout(() => { setTitle(''); setArtist(''); setImageFile(null) }, 2000)
       setTimeout(() => { setUploaded(false); setMode('preview'); fetchItems() }, 2500)
     }
   }
@@ -109,12 +124,12 @@ export default function Home() {
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>截图 (选填)</label>
                 <div onClick={() => document.getElementById('file-input')?.click()}
-                  style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', background: '#fafafa', color: imageName ? '#000' : '#999', transition: 'all 0.2s' }}
+                  style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', background: '#fafafa', color: imageFile ? '#000' : '#999', transition: 'all 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#000')}
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ddd')}>
-                  {imageName || '点击选择截图'}
+                  {imageFile?.name || '点击选择截图'}
                 </div>
-                <input id="file-input" type="file" accept="image/*" onChange={(e) => setImageName(e.target.files?.[0]?.name || '')} style={{ display: 'none' }} />
+                <input id="file-input" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
               </div>
               <motion.button type="submit" disabled={submitting || uploaded}
                 whileHover={{ scale: (submitting || uploaded) ? 1 : 1.02 }}
@@ -175,8 +190,10 @@ export default function Home() {
                       </div>
                       <div style={{ overflow: 'hidden', maxHeight: isExpanded ? '300px' : '0', transition: 'max-height 0.3s ease-out' }}>
                         <div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '12px', marginTop: '4px', marginBottom: '4px', display: 'flex', gap: '16px' }}>
-                          <div style={{ width: '100px', height: '100px', background: '#e8e8e8', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#999', flexShrink: 0 }}>
-                            {item.image ? '截图' : '无'}
+                          <div style={{ width: '90px', height: '140px', background: '#e8e8e8', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#999', flexShrink: 0, overflow: 'hidden' }}>
+                            {item.image ? (
+                              <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : '无'}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
