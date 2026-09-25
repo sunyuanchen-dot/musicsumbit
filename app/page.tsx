@@ -73,7 +73,8 @@ export default function Home() {
       setMySongs(getMySongs())
       setUploadState('success')
       setTimeout(() => { setTitle(''); setArtist(''); setImageFile(null) }, 2000)
-      setTimeout(() => { setUploadState('idle'); setMode('preview'); fetchItems(token) }, 2500)
+      setTimeout(() => { setMode('preview'); fetchItems(token) }, 2600)
+      setTimeout(() => { setUploadState('idle') }, 3000)
     } else {
       setUploadState('idle')
     }
@@ -126,49 +127,76 @@ export default function Home() {
       <AnimatePresence mode="wait">
         {mode === 'upload' ? (
           <motion.div key="upload" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.25 }}
-            style={{ border: '2px solid #000', borderRadius: '16px', padding: '24px 20px', minHeight: uploadState === 'success' ? '280px' : undefined, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {uploadState === 'success' ? (
-              <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                style={{ textAlign: 'center' }}>
-                <motion.div initial={{ rotate: -180, scale: 0 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.15 }}
-                  style={{ fontSize: '48px', marginBottom: '12px' }}>✓</motion.div>
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  style={{ fontSize: '18px', fontWeight: 700 }}>提交成功</motion.div>
+            style={{ border: '2px solid #000', borderRadius: '16px', padding: '24px 20px' }}>
+            <form onSubmit={handleUpload} style={{ width: '100%' }}>
+              <motion.div
+                animate={uploadState === 'success'
+                  ? { height: 0, opacity: 0, marginBottom: 0 }
+                  : { height: 'auto', opacity: 1, marginBottom: 16 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ overflow: 'hidden' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>歌曲名称</label>
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="输入歌曲名称" required
+                  style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px' }} />
               </motion.div>
-            ) : (
-              <form onSubmit={handleUpload} style={{ width: '100%' }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>歌曲名称</label>
-                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="输入歌曲名称" required
-                    style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px' }} />
+
+              <motion.div
+                animate={uploadState === 'success'
+                  ? { height: 0, opacity: 0, marginBottom: 0 }
+                  : { height: 'auto', opacity: 1, marginBottom: 16 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ overflow: 'hidden' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>歌手</label>
+                <input type="text" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="输入歌手名称" required
+                  style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px' }} />
+              </motion.div>
+
+              <motion.div
+                animate={uploadState === 'success'
+                  ? { height: 0, opacity: 0, marginBottom: 0 }
+                  : { height: 'auto', opacity: 1, marginBottom: 20 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ overflow: 'hidden' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>截图 (选填)</label>
+                <div onClick={() => document.getElementById('file-input')?.click()}
+                  style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', background: '#fafafa', color: imageFile ? '#000' : '#999', transition: 'all 0.2s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#000')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ddd')}>
+                  {imageFile?.name || '点击选择截图'}
                 </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>歌手</label>
-                  <input type="text" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="输入歌手名称" required
-                    style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px' }} />
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>截图 (选填)</label>
-                  <div onClick={() => document.getElementById('file-input')?.click()}
-                    style={{ width: '100%', padding: '14px', border: '1px solid #ddd', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', background: '#fafafa', color: imageFile ? '#000' : '#999', transition: 'all 0.2s' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#000')}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ddd')}>
-                    {imageFile?.name || '点击选择截图'}
-                  </div>
-                  <input id="file-input" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                </div>
-                <motion.button type="submit" disabled={uploadState === 'submitting'}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  style={{ width: '100%', padding: '16px', background: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: uploadState === 'submitting' ? 'not-allowed' : 'pointer', opacity: uploadState === 'submitting' ? 0.8 : 1 }}>
-                  {uploadState === 'submitting' ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: '18px' }}>◌</motion.span>
-                      上传中...
-                    </span>
-                  ) : '提交投稿'}
-                </motion.button>
-              </form>
-            )}
+                <input id="file-input" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+              </motion.div>
+
+              <motion.button type="submit" disabled={uploadState === 'submitting'}
+                animate={{
+                  height: uploadState === 'success' ? 180 : 56,
+                  borderRadius: uploadState === 'success' ? 20 : 12,
+                }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                whileHover={uploadState === 'idle' ? { scale: 1.02 } : undefined}
+                whileTap={uploadState === 'idle' ? { scale: 0.98 } : undefined}
+                style={{ width: '100%', background: '#000', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 600, cursor: uploadState === 'submitting' ? 'not-allowed' : 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {uploadState === 'success' ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.15, duration: 0.35 }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                    <motion.div
+                      initial={{ rotate: -180, scale: 0 }}
+                      animate={{ rotate: 0, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.25 }}
+                      style={{ fontSize: '40px', lineHeight: 1 }}>✓</motion.div>
+                    <div style={{ fontSize: '16px', fontWeight: 700 }}>上传成功</div>
+                  </motion.div>
+                ) : uploadState === 'submitting' ? (
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: '18px' }}>◌</motion.span>
+                    上传中...
+                  </motion.span>
+                ) : '提交投稿'}
+              </motion.button>
+            </form>
             <div style={{ marginTop: '24px', width: '100%' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', letterSpacing: '0.5px' }}>NOTICE</h3>
               <div style={{ border: '1px solid #000', borderRadius: '12px', padding: '16px', fontSize: '13px', lineHeight: '1.6', color: '#333' }}>

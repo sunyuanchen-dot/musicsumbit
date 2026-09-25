@@ -3,6 +3,7 @@ const nextConfig = {
   output: 'export',
   basePath: '/musicsumbit',
   assetPrefix: '/musicsumbit',
+  trailingSlash: true,
   images: {
     unoptimized: true,
   },
