@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 
 interface MusicItem {
@@ -18,12 +19,23 @@ export default function AdminPage() {
   const [editArtist, setEditArtist] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [submissionOpen, setSubmissionOpen] = useState(true)
 
   useEffect(() => { fetchItems() }, [])
 
   const fetchItems = async () => {
     const { data } = await supabase.from('music').select('*')
     if (data) setItems(data.sort((a: any, b: any) => (b.vote_count || 0) - (a.vote_count || 0)))
+    const { data: setting } = await supabase
+      .from('settings').select('value').eq('key', 'submission_open').maybeSingle()
+    setSubmissionOpen(setting ? setting.value !== 'false' : true)
+  }
+
+  const toggleSubmission = async () => {
+    const next = !submissionOpen
+    setSubmissionOpen(next)
+    await supabase.rpc('admin_set_submission', { p_open: next })
+    fetchItems()
   }
 
   const handleUpdate = async (id: number) => {
@@ -69,11 +81,27 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <header style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
         <a href="/musicsumbit/" style={{ fontSize: '14px', color: '#888', textDecoration: 'none' }}>← 返回</a>
         <h1 style={{ fontSize: '20px', fontWeight: 800 }}>管理后台</h1>
         <span style={{ fontSize: '12px', color: '#888' }}>{items.length} 首歌</span>
       </header>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', border: '1px solid #000', borderRadius: '12px', marginBottom: '16px' }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '14px' }}>投稿开关</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+            {submissionOpen ? '主页可以提交投稿' : '主页已关闭投稿'}
+          </div>
+        </div>
+        <div onClick={toggleSubmission}
+          style={{ width: '48px', height: '28px', borderRadius: '14px', background: submissionOpen ? '#000' : '#ddd', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}>
+          <motion.div
+            animate={{ x: submissionOpen ? 22 : 2 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: 0 }} />
+        </div>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#eee' }}>
         {items.map(item => (

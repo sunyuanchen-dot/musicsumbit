@@ -67,3 +67,26 @@ BEGIN
   RETURN FOUND;
 END;
 $$;
+
+-- 8. 设置表（投稿开关）
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+INSERT INTO settings (key, value) VALUES ('submission_open', 'true')
+ON CONFLICT (key) DO NOTHING;
+
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "settings_read" ON settings;
+CREATE POLICY "settings_read" ON settings FOR SELECT USING (true);
+
+-- 9. RPC：管理投稿开关
+CREATE OR REPLACE FUNCTION admin_set_submission(p_open BOOLEAN)
+RETURNS BOOLEAN
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE settings SET value = p_open::text WHERE key = 'submission_open';
+  RETURN FOUND;
+END;
+$$;

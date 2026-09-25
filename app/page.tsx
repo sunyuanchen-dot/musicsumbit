@@ -27,6 +27,7 @@ export default function Home() {
   const [token, setToken] = useState('')
   const [votingIds, setVotingIds] = useState<number[]>([])
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [submissionOpen, setSubmissionOpen] = useState(true)
 
   useEffect(() => {
     setToken(getUserToken())
@@ -39,6 +40,10 @@ export default function Home() {
     const { data: userVotes } = userToken
       ? await supabase.from('votes').select('music_id').eq('voter_token', userToken)
       : { data: [] }
+    const { data: setting } = await supabase
+      .from('settings').select('value').eq('key', 'submission_open').maybeSingle()
+
+    setSubmissionOpen(setting ? setting.value !== 'false' : true)
 
     const votedIds = new Set((userVotes || []).map((v: any) => v.music_id))
     const merged = (songs || []).map((s: any) => ({
@@ -150,6 +155,12 @@ export default function Home() {
         {mode === 'upload' ? (
           <motion.div key="upload" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.25 }}
             style={{ border: '2px solid #000', borderRadius: '16px', padding: '24px 20px' }}>
+            {!submissionOpen ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>投稿已关闭</div>
+                <div style={{ fontSize: '13px', color: '#888' }}>感谢大家的参与</div>
+              </div>
+            ) : (
             <form onSubmit={handleUpload} style={{ width: '100%' }}>
               <motion.div
                 animate={uploadState === 'success'
@@ -219,6 +230,7 @@ export default function Home() {
                 ) : '提交投稿'}
               </motion.button>
             </form>
+            )}
             <div style={{ marginTop: '24px', width: '100%' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', letterSpacing: '0.5px' }}>NOTICE</h3>
               <div style={{ border: '1px solid #000', borderRadius: '12px', padding: '16px', fontSize: '13px', lineHeight: '1.6', color: '#333' }}>
@@ -235,6 +247,17 @@ export default function Home() {
         ) : (
           <motion.div key="preview" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.25 }}>
             <div style={{ height: '3px', background: '#000', marginBottom: '4px' }} />
+            {items.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '64px 0' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px' }}>
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <div style={{ fontSize: '15px', fontWeight: 600 }}>还没有投稿</div>
+                <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>来成为第一个吧</div>
+              </div>
+            )}
             <div>
               <AnimatePresence>
                 {items.map((item) => {
