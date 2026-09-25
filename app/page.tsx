@@ -25,6 +25,8 @@ export default function Home() {
   const [uploadState, setUploadState] = useState<'idle' | 'submitting' | 'success'>('idle')
 
   const [token, setToken] = useState('')
+  const [votingIds, setVotingIds] = useState<number[]>([])
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   useEffect(() => {
     setToken(getUserToken())
@@ -82,21 +84,41 @@ export default function Home() {
 
   const handleVote = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    const userToken = getUserToken()
-    const { data } = await supabase.rpc('toggle_vote', { p_music_id: id, p_voter_token: userToken })
-    const newItems = items.map(item =>
-      item.id === id ? { ...item, vote_count: data as number, my_vote: !item.my_vote } : item
-    ).sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0))
-    setItems(newItems)
+    if (votingIds.includes(id)) return
+    setVotingIds(prev => [...prev, id])
+    try {
+      const userToken = getUserToken()
+      const { data, error } = await supabase.rpc('toggle_vote', { p_music_id: id, p_voter_token: userToken })
+      if (!error && typeof data === 'number') {
+        setItems(prev => {
+          const next = prev.map(item => {
+            if (item.id !== id) return item
+            const myVote = data > item.vote_count ? true : data < item.vote_count ? false : item.my_vote
+            return { ...item, vote_count: data, my_vote: myVote }
+          })
+          return next.sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0))
+        })
+      }
+    } finally {
+      setVotingIds(prev => prev.filter(x => x !== id))
+    }
   }
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    const userToken = getUserToken()
-    await supabase.rpc('delete_own_music', { p_music_id: id, p_uploader_token: userToken })
-    removeMySong(id)
-    setMySongs(getMySongs())
-    fetchItems(token)
+    if (deletingId !== null) return
+    setDeletingId(id)
+    try {
+      const userToken = getUserToken()
+      const { error } = await supabase.rpc('delete_own_music', { p_music_id: id, p_uploader_token: userToken })
+      if (!error) {
+        await fetchItems(token)
+        removeMySong(id)
+        setMySongs(getMySongs())
+      }
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const toggleExpand = (id: number) => {
@@ -223,7 +245,7 @@ export default function Home() {
                       transition={{ layout: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}>
                       <div style={{ display: 'flex', alignItems: 'center', padding: '14px 0', cursor: 'pointer' }} onClick={() => toggleExpand(item.id)}>
                         <div onClick={(e) => handleVote(item.id, e)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '12px', cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '12px', cursor: votingIds.includes(item.id) ? 'wait' : 'pointer', flexShrink: 0, transition: 'transform 0.2s, opacity 0.2s', opacity: votingIds.includes(item.id) ? 0.5 : 1 }}
                           onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.2)')}
                           onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}>
                           <svg width="24" height="24" viewBox="0 0 24 24" fill={item.my_vote ? '#000' : 'none'} stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.3s' }}>
@@ -237,8 +259,24 @@ export default function Home() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {isMine && (
-                            <div onClick={(e) => handleDelete(item.id, e)}
-                              style={{ color: '#e74c3c', fontSize: '18px', cursor: 'pointer', padding: '4px', lineHeight: 1 }}>🗑</div>
+                            deletingId === item.id ? (
+                              <motion.span
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                style={{ display: 'inline-block', fontSize: '16px', color: '#e74c3c', width: '20px', textAlign: 'center' }}>◌</motion.span>
+                            ) : (
+                              <motion.div
+                                onClick={(e) => handleDelete(item.id, e)}
+                                whileHover={{ scale: 1.15 }}
+                                whileTap={{ scale: 0.9 }}
+                                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </motion.div>
+                            )
                           )}
                           <div style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', fontSize: '12px', color: '#888', flexShrink: 0 }}>▼</div>
                         </div>
@@ -251,8 +289,8 @@ export default function Home() {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
                             <p style={{ fontSize: '13px', color: '#888', marginBottom: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.artist}</p>
-                            <button onClick={(e) => handleVote(item.id, e)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#000', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s', whiteSpace: 'nowrap' }}>
+                            <button onClick={(e) => handleVote(item.id, e)} disabled={votingIds.includes(item.id)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#000', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: votingIds.includes(item.id) ? 'wait' : 'pointer', transition: 'all 0.3s', whiteSpace: 'nowrap', opacity: votingIds.includes(item.id) ? 0.6 : 1 }}>
                               <span style={{ color: item.my_vote ? '#FFD700' : '#fff', fontSize: '16px', transition: 'color 0.3s' }}>★</span>
                               {item.my_vote ? `已投票 (${item.vote_count})` : `投票 (${item.vote_count})`}
                             </button>
